@@ -1,0 +1,179 @@
+当谈及到网络系统层面，几乎任何东西都能由 Linux 来实现。Linux 被用来创建各式各样的网络系统和装置， 包括防火墙，路由器，名称服务器，网络连接式存储设备等等。
+
+被用来配置和操作网络系统的命令数目，就如网络系统一样巨大。我们仅仅会关注一些最经常 使用到的命令。我们要研究的命令包括那些被用来监测网络和传输文件的命令。另外，我们 还会探讨用来远端登录的 ssh 程序。
+
+## 检查和监测网络
+
+即使你不是一名系统管理员，检查一个网络的性能和运作情况也是经常有帮助的。
+
+### ping
+
+最基本的网络命令是 ping。这个 ping 命令发送一个特殊的网络数据包，叫做 IMCP ECHO_REQUEST，到 一台指定的主机。大多数接收这个包的网络设备将会回复它，来允许网络连接验证。
+
+> **注意：**大多数网络设备（包括 Linux 主机）都可以被配置为忽略这些数据包。通常，这样做是出于网络安全 原因，部分地遮蔽一台主机免受一个潜在攻击者地侵袭。配置防火墙来阻塞 IMCP 流量也很普遍。
+
+------
+
+例如，看看我们能否连接到网站 [linuxcommand.org](http://linuxcommand.org/)， 我们可以这样使用 ping 命令：
+
+```bash
+[me@linuxbox ~]$ ping linuxcommand.org
+```
+
+一旦启动，ping 命令会持续在特定的时间间隔内（默认是一秒）发送数据包，直到它被中断：
+
+```bash
+[me@linuxbox ~]$ ping linuxcommand.org
+PINGe linuxcommand.org (66.35.250.210) 56(84) bytes of data.
+64 bytes from vhost.sourceforge.net (66.35.250.210): icmp\_seq=1
+ttl=43 time=107 ms
+64 bytes from vhost.sourceforge.net (66.35.250.210): icmp\_seq=2
+ttl=43 time=108 ms
+64 bytes from vhost.sourceforge.net (66.35.250.210): icmp\_seq=3
+ttl=43 time=106 ms
+64 bytes from vhost.sourceforge.net (66.35.250.210): icmp\_seq=4
+ttl=43 time=106 ms
+64 bytes from vhost.sourceforge.net (66.35.250.210): icmp\_seq=5
+ttl=43 time=105 ms
+...
+```
+
+按下组合键 Ctrl-c，中断这个命令之后，ping 打印出运行统计信息。一个正常工作的网络会报告 零个数据包丢失。一个成功执行的“ping”命令会意味着网络的各个部件（网卡，电缆，路由，网关） 都处于正常的工作状态。网络系统
+
+### traceroute
+
+这个 traceroute 程序（一些系统使用相似的 tracepath 程序来代替）会显示从本地到指定主机 要经过的所有“跳数”的网络流量列表。例如，看一下到达 [slashdot.org](http://slashdot.org/) 网站，需要经过的路由 器，我们将这样做：
+
+```bash
+[me@linuxbox ~]$ traceroute slashdot.org
+```
+
+命令输出看起来像这样：
+
+```bash
+traceroute to slashdot.org (216.34.181.45), 30 hops max, 40 byte
+packets
+1 ipcop.localdomain (192.168.1.1) 1.066 ms 1.366 ms 1.720 ms	// DNS服务器
+2 * * *
+3 ge-4-13-ur01.rockville.md.bad.comcast.net (68.87.130.9) 14.622
+ms 14.885 ms 15.169 ms
+4 po-30-ur02.rockville.md.bad.comcast.net (68.87.129.154) 17.634
+ms 17.626 ms 17.899 ms
+5 po-60-ur03.rockville.md.bad.comcast.net (68.87.129.158) 15.992
+ms 15.983 ms 16.256 ms
+6 po-30-ar01.howardcounty.md.bad.comcast.net (68.87.136.5) 22.835
+...
+```
+
+从输出结果中，我们可以看到连接测试系统到 [slashdot.org](http://slashdot.org/) 网站需要经由16个路由器。对于那些提供标识信息的路由器，我们能看到它们的主机名，IP 地址和性能数据，这些数据包括三次从本地到 此路由器的往返时间样本。对于那些没有提供标识信息的路由器（由于路由器配置，网络拥塞，防火墙等 方面的原因），我们会看到几个星号，正如行中所示。
+
+### netstat
+
+netstat 程序被用来检查各种各样的网络设置和统计数据。通过此命令的许多选项，我们 可以看看网络设置中的各种特性。
+
+**使用“-ie”选项，我们能够查看系统中的网络接口：**
+
+```bash
+[me@linuxbox ~]$ netstat -ie
+eth0    Link encap:Ethernet HWaddr 00:1d:09:9b:99:67
+        inet addr:192.168.1.2 Bcast:192.168.1.255 Mask:255.255.255.0
+        inet6 addr: fe80::21d:9ff:fe9b:9967/64 Scope:Link
+        UP BROADCAST RUNNING MULTICAST MTU:1500 Metric:1
+        RX packets:238488 errors:0 dropped:0 overruns:0 frame:0
+        TX packets:403217 errors:0 dropped:0 overruns:0 carrier:0
+        collisions:0 txqueuelen:100 RX bytes:153098921 (146.0 MB) TX
+        bytes:261035246 (248.9 MB) Memory:fdfc0000-fdfe0000
+
+lo      Link encap:Local Loopback
+        inet addr:127.0.0.1 Mask:255.0.0.0
+```
+
+在上述实例中，我们看到我们的测试系统有两个网络接口。第一个，叫做 eth0，是 因特网接口，和第二个，叫做 lo，是内部回环网络接口，它是一个虚拟接口，系统用它来 “自言自语”。
+
+当执行日常网络诊断时，要查看的重要信息是每个网络接口第四行开头出现的单词 “UP”，说明这个网络接口已经生效，还要查看第二行中 inet addr 字段出现的有效 IP 地址。对于使用 DHCP（动态主机配置协议）的系统，在 这个字段中的一个有效 IP 地址则证明了 DHCP 工作正常。
+
+**使用这个“-r”选项会显示内核的网络路由表：**
+
+```bash
+[me@linuxbox ~]$ netstat -r
+Kernel IP routing table
+Destination     Gateway     Genmask         Flags    MSS  Window  irtt Iface
+
+192.168.1.0     *           255.255.255.0   U        0    0          0 eth0
+default         192.168.1.1 0.0.0.0         UG       0    0          0 eth0
+```
+
+在这个简单的例子里面，我们看到了，位于防火墙之内的局域网中，一台客户端计算机的典型路由表。 第一行显示了目的地 192.168.1.0。IP 地址以零结尾是指网络，而不是个人主机， 所以这个目的地意味着局域网中的任何一台主机。下一个字段，Gateway， 是网关（路由器）的名字或 IP 地址，用它来连接当前的主机和目的地的网络。 若这个字段显示一个星号，则表明不需要网关。
+
+最后一行包含目的地 default。指的是发往任何表上没有列出的目的地网络的流量。 在我们的实例中，我们看到网关被定义为地址 192.168.1.1 的路由器，它应该能 知道怎样来处理目的地流量。
+
+### netstat -tnlp
+
+- 作用：查看网络连接状态
+- 语法：#netstat -tnlp
+
+```bash
+[root@inno ~]# netstat -tnlp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      2044/sshd
+```
+
+> 选项说明：
+>
+> ​	-t：表示只列出tcp协议的连接；
+>
+> ​	-n：表示将地址从字母组合转化成ip地址，将协议转化成端口号来显示；
+>
+> ​	-l：表示过滤出“state（状态）”列中其值为LISTEN（监听）的连接；
+>
+> ​	-p：表示显示发起连接的进程pid和进程名称；
+
+### lsof解除端口占用
+
+- 语法：#lsof -i -P | grep -i "8080"
+
+```bash
+~ took 8s
+➜  lsof -i -P | grep -i "8080"
+QQ        12919 inno   15u  IPv4 0x51e0284ea89f8f6f      0t0  TCP 192.168.1.104:55114->109.244.170.159:8080 (ESTABLISHED)
+QQ        12919 inno   16u  IPv4 0x51e0284ea89f8f6f      0t0  TCP 192.168.1.104:55114->109.244.170.159:8080 (ESTABLISHED)
+```
+
+- 语法：task/taskall
+
+```bash
+~ 
+➜ killall QQ
+# 或者
+～
+kill -2 12919
+```
+
+### ifconfig（重点）
+
+- 作用：用于操作网卡相关的指令。
+- 简单语法：#ifconfig		（获取网卡信息）
+
+```bash
+[root@inno ~]# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.16.23.65  netmask 255.255.240.0  broadcast 172.16.31.255
+        ether 00:16:3e:0a:9b:2f  txqueuelen 1000  (Ethernet)
+        RX packets 2271268  bytes 350387402 (334.1 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 1694416  bytes 432620771 (412.5 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 121  bytes 6838 (6.6 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 121  bytes 6838 (6.6 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+Eth0表示Linux中的一个网卡，eth0是其名称。Lo（loop，本地回还网卡，其ip地址一般都是127.0.0.1）也是一个网卡名称。
+
+> 注意：inet addr就是网卡的ip地址。
